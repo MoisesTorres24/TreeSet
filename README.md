@@ -1,158 +1,146 @@
-# TreeSet en Java: conjuntos ordenados con árboles rojinegros
+# TreeSet en Java
 
 **Materia:** Diseño y Programación Orientada a Objetos
+
 **Tema:** `java.util.TreeSet`
 
-## 1. ¿Qué es un TreeSet?
+**Integrantes:** 
+- Torres González Moisés Gerónimo - S25018144
+- Cobaxin Miss Bryan de Jesús - S25018143
 
-### 1.1 Definición y jerarquía
+## 1.0 ¿Qué es un TreeSet?
 
-Muchas veces necesitamos una colección sin elementos repetidos y siempre ordenada. En Java, `TreeSet` ofrece justo eso dentro del Java Collections Framework.
+Un `TreeSet` en Java es una estructura de datos que pertenece al *Java Collections Framework*. Es una implementación de la interfaz `NavigableSet` (que a su vez hereda de `SortedSet` y `Set`). Su propósito principal es almacenar una colección de elementos garantizando que no existan datos duplicados y que todos se mantengan acomodados en un orden específico de forma automática.
 
-`TreeSet<E>` implementa `NavigableSet<E>` y guarda elementos únicos y ordenados. Su jerarquía es:
+Jerarquía de `TreeSet`:
 
-![Jerarquía de TreeSet](jerarquiaTreeSet.png)
+![Jerarquia de TreeSet](Images/jerarquiaTreeSet.png)
 
-Es un ejemplo de **interfaces y herencia**: `Set` prohíbe duplicados, `SortedSet` agrega orden y `NavigableSet` agrega métodos como `floor` o `ceiling`. Por **polimorfismo** podemos escribir `NavigableSet<Integer> conjunto = new TreeSet<>();`.
-### 1.2 Características principales
 
-- No permite duplicados
-- Mantiene los elementos ordenados.
-- No admite `null`.
-- No es thread-safe; requiere sincronización externa (por ejemplo, `Collections.synchronizedSortedSet`).
-- Usa **genéricos** para dar seguridad de tipos.
 
----
+### 1.1 Características principales
 
-## 2. ¿Cómo funciona un TreeSet?
+* **No permite elementos duplicados:** Si intentas agregar un valor que ya existe, la estructura simplemente lo ignora.
 
-### 2.1 Estructura interna
 
-Un `TreeSet` está respaldado por un `TreeMap`, donde los elementos son las claves. El `TreeMap` usa un **árbol rojinegro**: un árbol binario de búsqueda autobalanceado cuyos nodos son rojos o negros. Por ejemplo, la raíz es negra y un nodo rojo no tiene hijos rojos. Al insertar o eliminar, se reacomoda con recoloreos y rotaciones.
+* **Ordenamiento automático:** Mantiene los elementos ordenados en todo momento tras cada inserción o eliminación.
 
-Estas reglas evitan que un camino sea mucho más largo que otro, así que la altura es proporcional a log n y las operaciones son O(log n) incluso en el peor caso (un árbol común podría degenerar en O(n)). Ejemplo tras insertar 10, 20, 30, 40, 50 (N = negro, R = rojo):
 
-```
-          20(N)
-         /     \
-      10(N)    40(N)
-              /    \
-           30(R)  50(R)
-```
+* **No admite nulos:** A diferencia de otras colecciones, no permite almacenar valores `null`.
 
-### 2.2 Orden natural vs. Comparator
 
-- **Orden natural:** los elementos implementan `Comparable<T>` y definen `compareTo` (como `String` e `Integer`).
-- **Orden personalizado:** se pasa un `Comparator<T>` al constructor.
+* **Decisión de igualdad:** Determina si un elemento es un duplicado usando el resultado del método `compareTo()` o `compare()`, ignorando el tradicional método `equals()`.
 
-Importante: el `TreeSet` considera iguales a dos elementos si `compareTo`/`compare` devuelve 0, **no con `equals`**. Oracle advierte que el orden debe ser consistente con `equals` para respetar el contrato de `Set`.
 
-### 2.3 Complejidad de las operaciones
+* **No es thread-safe:** Si se usa en entornos con múltiples hilos, requiere sincronización externa.
 
-| Operación | Complejidad |
-|---|---|
-| `add` | O(log n) |
-| `remove` | O(log n) |
-| `contains` | O(log n) |
-| `first` / `last` | O(log n) |
 
-Recorrer todo el conjunto es O(n).
+* **Usa genéricos:** Proporciona seguridad de tipos en tiempo de compilación.
 
-### 2.4 Métodos más importantes
 
-| Método | Descripción |
-|---|---|
-| `add`, `remove`, `contains` | Insertar, eliminar y buscar |
-| `first`, `last` | Menor y mayor elemento |
-| `floor(e)` / `ceiling(e)` | Mayor elemento ≤ e / menor elemento ≥ e |
-| `lower(e)` / `higher(e)` | Mayor elemento < e / menor elemento > e |
-| `headSet(e)` / `tailSet(e)` | Elementos < e / elementos ≥ e |
-| `subSet(a, b)` | Elementos en el rango [a, b) |
-| `descendingSet()` | Vista en orden inverso |
-| `pollFirst()` / `pollLast()` | Quita y devuelve el menor / el mayor |
-
-`headSet`, `tailSet` y `subSet` devuelven **vistas**: si se modifica la vista, también cambia el conjunto original.
-
-### 2.5 Errores comunes
-
-```java
-// 1. ClassCastException: la clase no implementa Comparable
-TreeSet<Object> a = new TreeSet<>();
-a.add(new Object());   // lanza ClassCastException
-
-// 2. NullPointerException con orden natural
-TreeSet<String> b = new TreeSet<>();
-b.add(null);           // lanza NullPointerException
-
-// 3. "Duplicados" perdidos por un compareTo mal hecho:
-// si compareTo solo compara el promedio, dos estudiantes distintos
-// con el mismo promedio devuelven 0 y el segundo NO se agrega.
-```
-
-Se soluciona con un criterio de desempate (sección 4).
 
 ---
 
-## 3. Ejemplos de aplicaciones reales
+## 2.0 ¿Cómo funciona por dentro?
 
-> **Nota sobre las imágenes:** las imágenes de referencia de cada caso se buscaron en la web y se muestran en el chat. Para incluirlas en este archivo, guárdalas en una carpeta `imagenes/` y descomenta la línea de imagen de cada caso, indicando su fuente.
+Para lograr mantener todo ordenado de forma automática y rápida, el `TreeSet` no guarda los datos en un arreglo tradicional. En su lugar, utiliza una estructura de datos avanzada basada en nodos.
 
-### 3.1 Ranking sin repetidos
+### 2.1 El Árbol Rojinegro (Red-Black Tree)
 
-<!-- ![Tabla de posiciones](imagenes/ranking.png) -->
+Detrás de escena, un `TreeSet` está respaldado por un `TreeMap`, el cual utiliza una estructura llamada **Árbol Rojinegro**.
 
-- **Contexto:** un torneo o videojuego muestra a los mejores jugadores.
-- **Problema:** mantener el ranking ordenado por puntaje, sin repetidos.
-- **Por qué TreeSet:** cada inserción lo deja ordenado sin un `sort` aparte.
-- **Métodos:** `add`, `first`, `headSet`, `descendingSet`.
+Un Árbol Rojinegro es un árbol binario de búsqueda que **se auto-balancea**. Aplica reglas estrictas de "colores" a sus nodos (rojos o negros) para evitar deformarse:
 
-### 3.2 Agenda de eventos
+1. La raíz del árbol siempre es negra.
 
-<!-- ![Calendario de eventos](imagenes/agenda.png) -->
 
-- **Contexto:** un calendario con eventos por fecha y hora.
-- **Problema:** mostrarlos en orden cronológico y hallar el siguiente evento.
-- **Por qué TreeSet:** con un `Comparator` por fecha, la agenda siempre está ordenada y la búsqueda es eficiente.
-- **Métodos:** `add`, `ceiling`, `subSet`.
+2. Un nodo rojo nunca puede tener hijos rojos.
 
-### 3.3 Autocompletado
 
-<!-- ![Autocompletado](imagenes/autocompletado.png) -->
 
-- **Contexto:** una barra de búsqueda que sugiere palabras.
-- **Problema:** encontrar rápido las palabras con cierto prefijo.
-- **Por qué TreeSet:** en orden alfabético, las palabras con el mismo prefijo quedan juntas.
-- **Métodos:** `ceiling(prefijo)` y `subSet(prefijo, prefijo + "\uffff")`.
+Cuando insertas o eliminas un dato, el árbol detecta si una de sus ramas está creciendo demasiado. Si es así, hace "rotaciones" y recolorea los nodos para reacomodarse automáticamente. Esto garantiza que la altura del árbol siempre se mantenga proporcional al logaritmo del número de elementos (`log n`), lo que asegura un rendimiento rápido y estable incluso en el peor de los casos.
 
-### 3.4 Tareas por prioridad
+![Árbol rojinegro](Images/ArbolRojinegro.png)
 
-<!-- ![Tareas por prioridad](imagenes/tareas.png) -->
-
-- **Contexto:** un tablero de tareas con prioridad.
-- **Problema:** atender primero la más urgente y consultar rangos de prioridad.
-- **Por qué TreeSet:** además de sacar la primera, permite consultar rangos.
-- **Métodos:** `pollFirst`, `headSet`, `tailSet`.
 
 ---
 
-## 4. Ejemplo en código Java
+## 3.0 Tipos de Ordenamiento
 
-El programa se probó compilándolo y ejecutándolo. Todo va en un solo archivo, `EjemploTreeSet.java`, en el orden en que se explica a continuación. Usa solo clases normales, `Comparable` y un `Comparator` como clase aparte.
+El `TreeSet` necesita saber bajo qué reglas debe acomodar los elementos. Para esto, Java ofrece dos enfoques principales.
 
-### 4.1 Importaciones
+### 3.1 Orden Natural (`Comparable`)
+
+El orden natural ocurre cuando los propios objetos "saben" cómo ordenarse a sí mismos. Para lograrlo, la clase del objeto debe implementar la interfaz genérica `Comparable<T>` y sobrescribir su método `compareTo()`.
+
+* **¿Cuándo se usa?** Cuando el objeto tiene un criterio de ordenamiento predeterminado que casi siempre será el mismo. Por ejemplo, la clase `String` y la clase `Integer` ya implementan `Comparable` por defecto (alfabético y numérico).
+
+
+
+### 3.2 Comparator
+
+Un `Comparator<T>` es un criterio de ordenamiento externo al objeto. Se implementa creando una clase separada que contenga el método `compare()` y se pasa como parámetro al constructor del `TreeSet`.
+
+* **¿Cuándo se usa?** Cuando necesitas ordenar los objetos de una forma distinta a su orden natural. También es indispensable cuando quieres ordenar objetos de una clase que tú no creaste y que no puedes modificar para agregarle `Comparable`.
+
+
+
+---
+
+## 4.0 Los Métodos de Navegación y Complejidad
+
+Gracias a la estructura auto-balanceada del Árbol Rojinegro, las operaciones principales tienen una complejidad temporal de **O(log n)**, lo que las hace extremadamente eficientes.
+
+### 4.1 ¿Qué son los métodos de navegación?
+
+Al implementar la interfaz `NavigableSet`, el `TreeSet` adquiere herramientas de búsqueda relativa llamadas "métodos de navegación". A diferencia de una búsqueda tradicional donde necesitas el valor exacto, los métodos de navegación te permiten hacer consultas de aproximación o trabajar con rangos. Sirven para responder preguntas como: *"¿Cuál es el valor más cercano a X?"* o *"Dame todos los elementos mayores a Y"*.
+
+### 4.2 Métodos de `TreeSet`
+
+| Método | Descripción | Complejidad Temporal |
+| :--- | :--- | :--- |
+| `add(E e)` | Inserta el elemento en la posición correcta si no existe. | **O(log n)** |
+| `addAll(Collection<? extends E> c)` | Añade todos los elementos de una colección al conjunto. | **O(m log n)** |
+| `ceiling(E e)` | Devuelve el elemento menor o igual / mayor o igual a `e`. | **O(log n)** |
+| `clear()` | Elimina absolutamente todos los elementos del conjunto. | **O(n)** |
+| `clone()` | Devuelve una copia superficial (shallow copy) del `TreeSet`. | **O(n)** |
+| `comparator()` | Devuelve el `Comparator` usado, o `null` si usa el orden natural. | **O(1)** |
+| `contains(Object o)` | Devuelve `true` si el conjunto contiene el elemento. | **O(log n)** |
+| `descendingIterator()` | Devuelve un iterador sobre los elementos en orden descendente. | **O(1)** |
+| `descendingSet()` | Devuelve una vista en orden inverso de los elementos. | **O(1)** *(Vista)* |
+| `first()` | Devuelve el elemento menor (primero). | **O(log n)** |
+| `floor(E e)` | Devuelve el elemento menor o igual / mayor o igual a `e`. | **O(log n)** |
+| `headSet(E toElement)` | Devuelve una vista de elementos estrictamente menores a `toElement`. | **O(1)** *(Vista)* |
+| `headSet(E toElement, boolean inclusive)` | Devuelve una vista de elementos menores (o iguales, si es true) a `toElement`. | **O(1)** *(Vista)* |
+| `higher(E e)` | Devuelve el elemento estrictamente mayor a `e`. | **O(log n)** |
+| `isEmpty()` | Devuelve `true` si el conjunto no contiene elementos. | **O(1)** |
+| `iterator()` | Devuelve un iterador sobre los elementos en orden ascendente. | **O(1)** |
+| `last()` | Devuelve el elemento mayor (último). | **O(log n)** |
+| `lower(E e)` | Devuelve el elemento estrictamente menor a `e`. | **O(log n)** |
+| `pollFirst()` | Recupera y elimina el elemento menor del conjunto. | **O(log n)** |
+| `pollLast()` | Recupera y elimina el elemento mayor del conjunto. | **O(log n)** |
+| `remove(Object o)` | Elimina el elemento especificado del conjunto. | **O(log n)** |
+| `size()` | Devuelve la cantidad de elementos en el conjunto. | **O(1)** |
+| `spliterator()` | Crea un `Spliterator` de enlace tardío (late-binding) y de tipo fail-fast. | **O(1)** |
+| `subSet(E fromElement, E toElement)` | Devuelve una vista del conjunto en el rango `[fromElement, toElement)`. | **O(1)** *(Vista)* |
+| `subSet(E from, boolean fromInc, E to, boolean toInc)` | Devuelve una vista especificando si los límites son inclusivos o exclusivos. | **O(1)** *(Vista)* |
+| `tailSet(E fromElement)` | Devuelve una vista de elementos mayores o iguales a `fromElement`. | **O(1)** *(Vista)* |
+| `tailSet(E fromElement, boolean inclusive)` | Devuelve una vista de elementos mayores (o iguales, si es true) a `fromElement`. | **O(1)** *(Vista)* |
+
+---
+
+## 5.0 Ejemplos en Código
+### 5.1 Clase base y el porqué del `compareTo`
+
+Cuando implementamos `Comparable`, Java nos obliga a sobrescribir (utilizar `@Override`) el método `compareTo`. Hacemos esto por dos razones críticas:
+
+1. **Definir la regla de orden:** Le decimos a Java matemáticamente qué objeto es "mayor" y cuál es "menor".
+2. **Evitar la pérdida de datos:** Si dos estudiantes tienen el mismo promedio y la función devuelve `0`, el `TreeSet` asume que son **el mismo objeto duplicado** y descarta al segundo. Por eso sobrescribimos el método para agregar un criterio de desempate.
+
+
 
 ```java
-import java.util.Comparator;
-import java.util.TreeSet;
-```
-
-Se importan `TreeSet` (la colección) y `Comparator` (para el orden personalizado).
-
-### 4.2 Clase Estudiante con Comparable
-
-```java
-// Clase propia que implementa Comparable.
-// El orden natural será por promedio, de mayor a menor.
+// Implementamos Comparable para definir el orden por defecto
 class Estudiante implements Comparable<Estudiante> {
     private String nombre;
     private double promedio;
@@ -162,25 +150,18 @@ class Estudiante implements Comparable<Estudiante> {
         this.promedio = promedio;
     }
 
-    public String getNombre() {
-        return nombre;
-    }
+    public String getNombre() { return nombre; }
+    public double getPromedio() { return promedio; }
 
-    public double getPromedio() {
-        return promedio;
-    }
-
+    // Sobrescribimos compareTo 
     @Override
     public int compareTo(Estudiante otro) {
-        // Si el promedio es distinto, se ordena por promedio (mayor primero)
-        if (this.promedio > otro.promedio) {
-            return -1;
-        }
-        if (this.promedio < otro.promedio) {
-            return 1;
-        }
-        // Si el promedio es igual, se desempata por nombre.
-        // Sin esto, el TreeSet pensaría que son el mismo estudiante.
+        // Ordenamos de mayor a menor promedio
+        if (this.promedio > otro.promedio) return -1;
+        if (this.promedio < otro.promedio) return 1;
+        
+        // Criterio de desempate. 
+        // Si el promedio es idéntico, comparamos por nombre para evitar que el TreeSet crea que son duplicados y los borre.
         return this.nombre.compareTo(otro.nombre);
     }
 
@@ -189,155 +170,137 @@ class Estudiante implements Comparable<Estudiante> {
         return nombre + " (" + promedio + ")";
     }
 }
+
 ```
 
-- Los atributos son `private` (**encapsulamiento**) y se consultan con getters.
-- `implements Comparable<Estudiante>` obliga a escribir `compareTo`, que define el **orden natural**.
-- `compareTo` devuelve un número negativo si este estudiante va antes, positivo si va después y 0 si se consideran iguales. Aquí va primero el de mayor promedio.
-- El desempate por nombre evita que dos estudiantes con el mismo promedio se tomen como duplicados.
-- `toString` sirve para imprimir cada estudiante de forma legible.
-
-### 4.3 Comparator personalizado
+### 5.2 Implementando un `Comparator` externo
 
 ```java
-// Comparator personalizado: ordena a los estudiantes por nombre
+import java.util.Comparator;
+
 class ComparadorPorNombre implements Comparator<Estudiante> {
     @Override
     public int compare(Estudiante a, Estudiante b) {
+
+        // Ignoramos el promedio y usamos orden alfabético tradicional
         return a.getNombre().compareTo(b.getNombre());
     }
 }
+
 ```
 
-Esta clase define otro criterio de orden sin modificar `Estudiante`. El método `compare` recibe dos estudiantes y los compara por nombre, usando el `compareTo` de `String`.
-
-### 4.4 Método main: ejemplo básico (orden natural)
+### 5.3 Implementación principal y pruebas
 
 ```java
-public class EjemploTreeSet {
+import java.util.TreeSet;
 
+public class MainTreeSet {
     public static void main(String[] args) {
+        
+        // Utilizando el Orden Natural
+        System.out.println("--- Orden Natural (Por Promedio) ---");
+        TreeSet<Estudiante> conjuntoNatural = new TreeSet<>();
+        
+        conjuntoNatural.add(new Estudiante("Ana", 9.5));
+        conjuntoNatural.add(new Estudiante("Luis", 8.7));
+        conjuntoNatural.add(new Estudiante("Carlos", 9.5)); 
+        conjuntoNatural.add(new Estudiante("Beto", 7.2));
+    
+        conjuntoNatural.add(new Estudiante("Luis", 8.7)); // duplicado
+        
+        for (Estudiante e : conjuntoNatural) {
+            System.out.println(e);
+        }
 
-        // 1. Ejemplo básico: orden natural con Integers
-        System.out.println("=== 1. Orden natural con Integers ===");
+        // Utilizando el Comparator
+        System.out.println("\n--- Orden Personalizado (Por Nombre) ---");
+        TreeSet<Estudiante> conjuntoNombres = new TreeSet<>(new ComparadorPorNombre());
+        
+        conjuntoNombres.add(new Estudiante("Luis", 8.7));
+        conjuntoNombres.add(new Estudiante("Ana", 9.5));
+        conjuntoNombres.add(new Estudiante("Carlos", 9.5));
+        conjuntoNombres.add(new Estudiante("Beto", 7.2));
+        
+        for (Estudiante e : conjuntoNombres) {
+            System.out.println(e);
+        }
+
+```
+
+**Salida en consola:**
+
+```text
+--- Orden Natural (Por Promedio) ---
+Ana (9.5)
+Carlos (9.5)
+Luis (8.7)
+Beto (7.2)
+
+--- Orden Personalizado (Por Nombre) ---
+Ana (9.5)
+Beto (7.2)
+Carlos (9.5)
+Luis (8.7)
+
+```
+
+### 5.4 Probando los métodos de navegación
+
+```java
+        // Pruebas de Navegación
+        System.out.println("\n--- Navegación Relativa ---");
         TreeSet<Integer> numeros = new TreeSet<>();
-        numeros.add(40);
-        numeros.add(10);
-        numeros.add(30);
-        numeros.add(20);
-        numeros.add(10); // repetido: no se agrega
-        System.out.println("Conjunto: " + numeros);
-        System.out.println("Primero: " + numeros.first());
-        System.out.println("Último: " + numeros.last());
-        System.out.println("¿Contiene 30? " + numeros.contains(30));
-```
+        numeros.add(10); numeros.add(20); numeros.add(30); numeros.add(40); numeros.add(50);
 
-Se crea un `TreeSet<Integer>` y se agregan números desordenados. El conjunto los ordena solo, ignora el 10 repetido y permite consultar el menor (`first`), el mayor (`last`) y si existe un valor (`contains`).
-
-### 4.5 Estudiantes con Comparable
-
-```java
-        // 2. Clase propia con Comparable
-        System.out.println("\n=== 2. Estudiantes con Comparable ===");
-        TreeSet<Estudiante> estudiantes = new TreeSet<>();
-        estudiantes.add(new Estudiante("Ana", 9.5));
-        estudiantes.add(new Estudiante("Luis", 8.7));
-        estudiantes.add(new Estudiante("Carla", 9.5));
-        estudiantes.add(new Estudiante("Pedro", 7.9));
-        for (Estudiante e : estudiantes) {
-            System.out.println(e);
-        }
-```
-
-Como no se pasa ningún `Comparator`, el `TreeSet` usa el `compareTo` de `Estudiante`. El `for` recorre el conjunto ya ordenado por promedio.
-
-### 4.6 Estudiantes con Comparator
-
-```java
-        // 3. Comparator personalizado (ordenar por nombre)
-        System.out.println("\n=== 3. Comparator personalizado ===");
-        TreeSet<Estudiante> porNombre = new TreeSet<>(new ComparadorPorNombre());
-        porNombre.add(new Estudiante("Pedro", 7.9));
-        porNombre.add(new Estudiante("Ana", 9.5));
-        porNombre.add(new Estudiante("Luis", 8.7));
-        for (Estudiante e : porNombre) {
-            System.out.println(e);
-        }
-```
-
-Al pasar `new ComparadorPorNombre()` al constructor, el conjunto ignora el orden natural y ordena alfabéticamente por nombre. Es **polimorfismo**: el `TreeSet` solo conoce la interfaz `Comparator`.
-
-### 4.7 Métodos de navegación
-
-```java
-        // 4. Métodos de navegación
-        System.out.println("\n=== 4. Métodos de navegación ===");
-        TreeSet<Integer> nav = new TreeSet<>();
-        nav.add(10);
-        nav.add(20);
-        nav.add(30);
-        nav.add(40);
-        nav.add(50);
-        System.out.println("Conjunto: " + nav);
-        System.out.println("floor(25) = " + nav.floor(25));         // mayor que sea <= 25
-        System.out.println("ceiling(25) = " + nav.ceiling(25));     // menor que sea >= 25
-        System.out.println("headSet(30) = " + nav.headSet(30));     // elementos < 30
-        System.out.println("tailSet(30) = " + nav.tailSet(30));     // elementos >= 30
-        System.out.println("descendingSet() = " + nav.descendingSet());
-        System.out.println("pollFirst() = " + nav.pollFirst());     // quita el menor
-        System.out.println("Después de pollFirst: " + nav);
+        System.out.println("Conjunto base: " + numeros);
+        
+        // Consultas de extremos y aproximaciones
+        System.out.println("Elemento más pequeño (first): " + numeros.first());
+        System.out.println("Elemento más grande (last): " + numeros.last());
+        System.out.println("Inmediato mayor o igual a 25 (ceiling): " + numeros.ceiling(25)); 
+        System.out.println("Inmediato menor estrictamente a 30 (lower): " + numeros.lower(30)); 
+        
+        // Consultas por rangos
+        System.out.println("Rango del 20 al 40 exclusivo (subSet): " + numeros.subSet(20, 40));
+        System.out.println("Menores a 30 (headSet): " + numeros.headSet(30));
+        System.out.println("Mayores o iguales a 30 (tailSet): " + numeros.tailSet(30));
+        
+        // Extracción de datos
+        System.out.println("Extrayendo el menor (pollFirst): " + numeros.pollFirst()); 
+        System.out.println("Extrayendo el mayor (pollLast): " + numeros.pollLast()); 
+        
+        System.out.println("Conjunto final: " + numeros);
     }
 }
-```
-
-Con el 25, que no está en el conjunto, `floor` devuelve el vecino inferior (20) y `ceiling` el superior (30). `headSet` y `tailSet` devuelven la parte menor y la mayor o igual a 30, `descendingSet` muestra el orden inverso y `pollFirst` quita y devuelve el menor. Las dos últimas llaves cierran el método `main` y la clase.
-
-### Salida esperada
 
 ```
-=== 1. Orden natural con Integers ===
-Conjunto: [10, 20, 30, 40]
-Primero: 10
-Último: 40
-¿Contiene 30? true
 
-=== 2. Estudiantes con Comparable ===
-Ana (9.5)
-Carla (9.5)
-Luis (8.7)
-Pedro (7.9)
+**Salida en consola:**
 
-=== 3. Comparator personalizado ===
-Ana (9.5)
-Luis (8.7)
-Pedro (7.9)
+```text
+--- Navegación Relativa ---
+Conjunto base: [10, 20, 30, 40, 50]
+Elemento más pequeño (first): 10
+Elemento más grande (last): 50
+Inmediato mayor o igual a 25 (ceiling): 30
+Inmediato menor estrictamente a 30 (lower): 20
+Rango del 20 al 40 exclusivo (subSet): [20, 30]
+Menores a 30 (headSet): [10, 20]
+Mayores o iguales a 30 (tailSet): [30, 40, 50]
+Extrayendo el menor (pollFirst): 10
+Extrayendo el mayor (pollLast): 50
+Conjunto final: [20, 30, 40]
 
-=== 4. Métodos de navegación ===
-Conjunto: [10, 20, 30, 40, 50]
-floor(25) = 20
-ceiling(25) = 30
-headSet(30) = [10, 20]
-tailSet(30) = [30, 40, 50]
-descendingSet() = [50, 40, 30, 20, 10]
-pollFirst() = 10
-Después de pollFirst: [20, 30, 40, 50]
 ```
-
-Ana y Carla tienen el mismo promedio y ambas aparecen gracias al desempate por nombre.
 
 ---
 
-## 5. Conclusión
+## 6.0 Conclusiones
 
-Un `TreeSet` es un conjunto sin duplicados y ordenado mediante un árbol rojinegro, con operaciones O(log n). El orden y la igualdad dependen de `Comparable` o `Comparator`, no de `equals`. Conviene usarlo cuando se necesita orden permanente o consultas por rango (`floor`, `ceiling`, `subSet`). Si solo se verifica pertenencia, `HashSet` es más rápido; si solo se extrae el elemento de mayor prioridad, `PriorityQueue` es más simple.
+Un `TreeSet` es la estructura ideal dentro de Java cuando se necesita almacenar colecciones libres de elementos duplicados que exigen estar permanentemente ordenadas. Al estar gestionado internamente por un Árbol Rojinegro, permite realizar operaciones de búsqueda, inserción y eliminación con una eficiencia logarítmica de O(log n), superando con creces a las listas tradicionales cuando se trata de conjuntos de datos que requieren orden en tiempo real.
 
-Para mí, `TreeSet` muestra la utilidad de la POO: programar con interfaces, separar el criterio de orden en un `Comparator` y usar genéricos. También me hizo ver que implementar bien `compareTo` es parte del diseño de una clase.
+Comprender y dominar el `TreeSet` implica no solo conocer sus métodos de navegación para realizar consultas relativas y por rangos (`subSet`, `ceiling`, `floor`), sino también aplicar conceptos clave de Programación Orientada a Objetos, como la sobrescritura obligatoria de métodos, el polimorfismo y la separación de responsabilidades mediante la correcta implementación de interfaces como `Comparable` y `Comparator`.
 
----
+## Fuentes
 
-## Referencias
-
-- Oracle. *Java SE API Documentation: `java.util.TreeSet`, `NavigableSet`, `SortedSet`, `Comparable` y `Comparator`*. https://docs.oracle.com/en/java/javase/21/docs/api/
-- Oracle. *The Java Tutorials: Trail "Collections"*. https://docs.oracle.com/javase/tutorial/collections/index.html
-- Bloch, J. (2018). *Effective Java* (3.ª ed.). Addison-Wesley. (Ítem sobre implementar `Comparable`).
-- Cormen, T. H., Leiserson, C. E., Rivest, R. L. y Stein, C. *Introduction to Algorithms*. MIT Press. (Capítulo sobre árboles rojinegros).
+- GeeksforGeeks. (s.f.). *TreeSet in Java with Examples*. Recuperado de https://www.geeksforgeeks.org/java/treeset-in-java-with-examples/
